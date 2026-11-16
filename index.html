@@ -433,9 +433,12 @@ function tabla_(filas) {
   // =========================================================================
   // ESCUDO DEL COLEGIO: ruta de la imagen (ej. "escudo.png" en la misma carpeta que este archivo) o una imagen en base64.
   // Si el archivo no existe, se muestra el marco vacío del escudo.
-  let ESCUDO_URL = "escudo.png"
+  let ESCUDO_URL = "escudo.png"; // imagen en la misma carpeta que este archivo
+  const ESCUDO_RESPALDO = "https://raw.githubusercontent.com/Rootphanton/evaluacion-mate-3a6/main/escudo.png"; // si la anterior no carga
+  const N_PREG = 5, PTS = 9, TOTAL = 45; // 5 preguntas x 9 puntos = 45
+  const NOMBRE_COLEGIO = "Unidad Educativa Gran Mariscal de Ayacucho";
 
-  const DEFAULT_GOOGLE_SCRIPT_URL = "escudo.png"; // Google Apps Script de Matemática
+  const DEFAULT_GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwARaoKOhOiYC0TH8c-hTVtWiskS6oX4pVXa3GacAVHE3gfM_zeM8Zb33qcxLKgPSrHsA/exec"; // Google Apps Script de Matemática
   
   // Claves válidas para reiniciar el examen o abrir el panel docente:
   const VALID_RESET_KEYS = ["ayacucho2026irra"];
@@ -1278,24 +1281,31 @@ function tabla_(filas) {
 
   function initCrests() {
     document.querySelectorAll("[data-school]").forEach(n => { n.textContent = NOMBRE_COLEGIO; });
-    try { const l = localStorage.getItem("escudo_local_mat"); if (l) ESCUDO_URL = l; } catch (e) {}
-    if (!ESCUDO_URL) return;
-    const probe = new Image();
-    probe.onload = () => {
-      CREST_RATIO = probe.naturalWidth / probe.naturalHeight;
-      try {
-        const c = document.createElement("canvas");
-        c.width = probe.naturalWidth; c.height = probe.naturalHeight;
-        c.getContext("2d").drawImage(probe, 0, 0);
-        CREST_DATA = c.toDataURL("image/png");
-      } catch (e) {}
-      document.querySelectorAll("[data-crest]").forEach(slot => {
-        const im = new Image();
-        im.src = ESCUDO_URL; im.alt = "Escudo del Estado Plurinacional de Bolivia";
-        slot.textContent = ""; slot.classList.add("has-img"); slot.appendChild(im);
-      });
+    let local = "";
+    try { local = localStorage.getItem("escudo_local_mat") || ""; } catch (e) {}
+    const lista = [local, ESCUDO_URL, ESCUDO_RESPALDO].filter(Boolean);
+    const probar = i => {
+      if (i >= lista.length) return;
+      const pr = new Image();
+      pr.crossOrigin = "anonymous";
+      pr.onload = () => {
+        CREST_RATIO = pr.naturalWidth / pr.naturalHeight;
+        try {
+          const c = document.createElement("canvas");
+          c.width = pr.naturalWidth; c.height = pr.naturalHeight;
+          c.getContext("2d").drawImage(pr, 0, 0);
+          CREST_DATA = c.toDataURL("image/png");
+        } catch (e) {}
+        document.querySelectorAll("[data-crest]").forEach(slot => {
+          const im = new Image();
+          im.src = lista[i]; im.alt = "Escudo de la unidad educativa";
+          slot.textContent = ""; slot.classList.add("has-img"); slot.appendChild(im);
+        });
+      };
+      pr.onerror = () => probar(i + 1);
+      pr.src = lista[i];
     };
-    probe.src = ESCUDO_URL;
+    probar(0);
   }
 
   function animateScore(total) {
